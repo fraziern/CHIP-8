@@ -1,7 +1,7 @@
-# import array
 
 
 filename = 'IBM Logo.ch8'
+
 
 def pretty_print(data:bytearray):
     import textwrap
@@ -10,11 +10,11 @@ def pretty_print(data:bytearray):
     for line in wrapped_list:
         print(line)
 
+ram = bytearray(4096)
+
 with open(filename,'rb') as file:
     full_rom = file.read()
 
-memory = bytearray(4096)
+ram[0x200:0x200 + len(full_rom)] = full_rom
 
-memory[0x200:0x200 + len(full_rom)] = full_rom
-
-pretty_print(memory)
+# pretty_print(memory)
