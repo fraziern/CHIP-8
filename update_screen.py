@@ -2,6 +2,23 @@ import sys
 import sdl2.ext
 
 
+LWIDTH = 64
+LHEIGHT = 32
+
+# Pixel size (physical)
+PIXWIDTH = 5
+PIXHEIGHT = 5
+
+PADDING = 1
+
+# Actual window width and height. Assuming pixels separated by padding
+WIDTH = (LWIDTH * PIXWIDTH) + ((LWIDTH + 1) * PADDING)
+HEIGHT = (LHEIGHT * PIXHEIGHT) + ((LHEIGHT + 1) * PADDING)
+
+WHITE = sdl2.ext.Color(255, 255, 255)
+BLACK = sdl2.ext.Color(0, 0, 0)
+
+
 # helper function to get list of bits from a byte
 def _int_to_bits_bitwise(byte:int):
     bits_list = []
@@ -59,6 +76,32 @@ def update_screen(screen_arr:list[list[int]], x:int, y:int, sprite:bytearray) ->
         
     return vf
 
+def clear_screen(screen_arr):
+    for y in range(len(screen_arr)):
+        for x in range(len(screen_arr[y])):
+            screen_arr[x][y] = 0
+
+
+def _draw(renderer, logical_x, logical_y):
+    # draw a pixel
+    x = PADDING + logical_x * (PIXWIDTH + PADDING)
+    y = PADDING + logical_y * (PIXHEIGHT + PADDING)
+    renderer.fill((x, y, PIXWIDTH, PIXHEIGHT), WHITE)
+
+
+def draw_screen(renderer:sdl2.ext.Renderer, screen_arr:list[list[int]]):
+    if len(screen_arr) < LHEIGHT:
+        raise ValueError("Out of range when drawing screen.")
+    
+    renderer.clear(BLACK)
+
+    for y in range(LHEIGHT):
+        if len(screen_arr[y]) < LWIDTH:
+            raise ValueError("Out of range when drawing screen.")
+        
+        for x in range(LWIDTH):
+            if screen_arr[y][x]:
+                _draw(renderer, x, y)
 
 #############################################################################################
 # The below is all to test the 'update_screen' function, and prototype code for screen drawing
