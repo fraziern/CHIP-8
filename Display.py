@@ -21,7 +21,7 @@ class Display:
 
     def __init__(self):
         self.mm_screen = [[0 for j in range(self.LWIDTH)] for i in range(self.LHEIGHT)]
-        sdl2.ext.init()
+        sdl2.ext.init()  # safe to call more than once
 
         self.window = sdl2.ext.Window("CHIP-8", size=(self.WIDTH, self.HEIGHT))
         self.windowrenderer = sdl2.ext.Renderer(self.window)
