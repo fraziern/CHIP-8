@@ -21,6 +21,12 @@ class Display:
 
     def __init__(self):
         self.mm_screen = [[0 for j in range(self.LWIDTH)] for i in range(self.LHEIGHT)]
+        sdl2.ext.init()
+
+        self.window = sdl2.ext.Window("CHIP-8", size=(self.WIDTH, self.HEIGHT))
+        self.windowrenderer = sdl2.ext.Renderer(self.window)
+
+        self.window.show()
 
     
     # helper function to get list of bits from a byte
@@ -83,3 +89,25 @@ class Display:
 
     def clear_screen(self):
         self.mm_screen = [[0 for j in range(self.LWIDTH)] for i in range(self.LHEIGHT)]
+        self.windowrenderer.clear(self.BLACK)
+
+
+    def _draw(self, logical_x, logical_y):
+        # draw a pixel
+        x = self.PADDING + logical_x * (self.PIXWIDTH + self.PADDING)
+        y = self.PADDING + logical_y * (self.PIXHEIGHT + self.PADDING)
+        self.windowrenderer.fill((x, y, self.PIXWIDTH, self.PIXHEIGHT), self.WHITE)
+
+
+    def render_screen(self):        
+        self.windowrenderer.clear(self.BLACK)
+
+        for y in range(self.LHEIGHT):            
+            for x in range(self.LWIDTH):
+                if self.mm_screen[y][x]:
+                    self._draw(x, y)
+        
+        self.windowrenderer.present()
+
+
+  
