@@ -42,7 +42,7 @@ class State():
         self.pc = value
 
     def set_index(self, value, set_overflow=False):
-        if(set_overflow and (self.index + value > 4095)):
+        if(set_overflow and (value > 4095)):
             self.set_vx(0xf, 1)
         self.index = value % 4096
 

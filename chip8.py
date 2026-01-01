@@ -7,7 +7,7 @@ from State import State
 
 DEBUG = False
 
-rom_filename = r'C:\Users\Nick\source\repos\chip8\roms\3-corax.ch8'
+rom_filename = r'C:\Users\Nick\source\repos\chip8\roms\bc_test.ch8'
 font_filename = r'C:\Users\Nick\source\repos\chip8\roms\font.ch8'
 
 SIXTYHZ = 1/60  # Target interval in seconds (approx 0.01667 seconds)
@@ -133,7 +133,7 @@ def main():
                 state.set_vx(n2, new_value)
             case 0x8:
                 match n4:
-                    case 0x0:       # 8xy0 set
+                    case 0x0:       # 8xy0 set x = y
                         state.set_vx(n2,state.get_vx(n3))
                     case 0x1:       # 8xy1 binary OR
                         value = state.get_vx(n2) | state.get_vx(n3)
@@ -174,21 +174,21 @@ def main():
                 # TODO set vf
             case 0xf:
                 match nn:
+                    case 0x1e:      # fx1e add to index
+                        value = state.get_index() + state.get_vx(n2)
+                        state.set_index(value, set_overflow=True)
                     case 0x29:      # fx29 set I to font location for char x
                         state.set_index((n2 * 5) + FONTSTART)
                     case 0x33:      # fx33 BCD conversion
-                        number1 = math.floor(nnn / 100)
-                        number2 = math.floor((nnn - number1*100) / 10)
-                        number3 = nnn - number1*100 - number2*10
-                        state.set_ram([number1, number2, number3])
+                        bcd = state.get_vx(n2)
+                        bcd_list = [(bcd//100),(bcd%100)//10,bcd%10]
+                        state.set_ram(bcd_list)
                     case 0x55:      # fx55 store registers to memory
                         for i in range(n2+1):
                             state.set_ram(state.get_vx(i), state.get_index()+i)
                     case 0x65:      # fx65 load registers from memory
                         for i in range(n2+1):
                             state.set_vx(i, state.get_ram(address=state.get_index()+i))
-                    case 0x1e:      # fx1e add to index
-                        state.set_index(n2, set_overflow=True)
                     case _:
                         raise NotImplementedError(f"Instruction not implemented: {instr.hex()}")
             case _:
