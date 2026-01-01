@@ -14,13 +14,14 @@ class State():
     def __str__(self):
         string = ""
         string += f'PC: {self.pc:X}\n'
-        string += f'Registers: {self.registers.hex()}'
+        string += f'Registers: {self.registers.hex(" ")}'
         return string
 
     def set_vx(self, vx, value):
         if vx > 15:
             raise ValueError(f"Attempting to set non-existent register: {vx:X}")
-        
+        if type(value) == bytes or type(value) == bytearray:
+            value = int.from_bytes(value)
         self.registers[vx] = value % 256
     
     def get_vx(self, vx):
@@ -30,18 +31,23 @@ class State():
         return self.registers[vx]
     
     def increment_pc(self, by=2):
-        self.pc += by
-        # TODO: overflow check
+        self.pc = (self.pc + by) % 4096
+
+    def get_pc(self):
+        return self.pc
     
     def set_pc(self, value):
+        if value > 4096:
+            raise IndexError("Cannot set PC to value greater than 0xfff")
         self.pc = value
-        # TODO checks
 
-    def set_index(self, value):
-        # TODO overflow check
-        self.index = value
-    
-    # def get_index   just use state.index
+    def set_index(self, value, set_overflow=False):
+        if(set_overflow and (self.index + value > 4095)):
+            self.set_vx(0xf, 1)
+        self.index = value % 4096
+
+    def get_index(self):
+        return self.index
 
     # convenience method
     def get_ram_at_pc(self,length=2):
@@ -57,8 +63,12 @@ class State():
     def set_ram(self, data, address=None):
         if address == None:
             address = self.index
+        if type(data) == int:
+            data = data.to_bytes(1)
+        elif type(data) == list:
+            data = bytes(data)
         if type(data) != bytearray and type(data) != bytes:
-            raise ValueError("Attempting to set RAM with wrong data type.")
+            raise ValueError(f"Attempting to set RAM with wrong data type: {type(data)}")
         if address + len(data) > 4096:
             raise OverflowError("Out of memory while writing to RAM.")
         self.ram[address:address+len(data)] = data
@@ -74,4 +84,12 @@ class State():
 
     def decrement_sound_timer(self):
         self.sound_timer = max(self.sound_timer - 1, 0)  
+
+    def stack_push(self, value):
+        self.stack.append(value)
+
+    def stack_pop(self):
+        if len(self.stack) <= 0:
+            raise IndexError("Attempting to pop from empty stack.")
+        return self.stack.pop()
     

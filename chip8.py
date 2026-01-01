@@ -7,7 +7,7 @@ from State import State
 
 DEBUG = False
 
-rom_filename = r'C:\Users\Nick\source\repos\chip8\roms\IBM logo.ch8'
+rom_filename = r'C:\Users\Nick\source\repos\chip8\roms\3-corax.ch8'
 font_filename = r'C:\Users\Nick\source\repos\chip8\roms\font.ch8'
 
 SIXTYHZ = 1/60  # Target interval in seconds (approx 0.01667 seconds)
@@ -30,6 +30,18 @@ def decode_instruction(instr:bytearray):
     nnn = (n2 << 8) | (n3 << 4) | n4
 
     return n1, n2, n3, n4, nn, nnn
+
+
+def subtract(state, a, b): 
+    # function for 8xy5 and 8xy7, subtracts a - b and updates state,
+    # returns value. does NOT set vx
+    carry = 1
+    value = state.get_vx(a) - state.get_vx(b)
+    if value < 0:  # emulate underflow
+        carry = 0
+        value = (value + 256) % 256
+    state.set_vx(0xf,carry)
+    return value
 
     
 def main():
@@ -99,16 +111,12 @@ def main():
                     case 0xe0:      # 00e0 clear screen
                         display.clear_screen()
                     case 0xee:      # 00ee return from subroutine
-                        if len(state.stack) == 0:
-                            raise ValueError(
-                                f"Attempting to pop from empty stack at instr: {pc - ROMSTART:X}")
-                        else:
-                            pc = state.stack.pop()
+                        state.set_pc(state.stack_pop())
             case 0x1:               # 1nnn jump
                 state.set_pc(nnn)
             case 0x2:               # 2nnn call subroutine
-                state.stack.append(pc)
-                pc = nnn
+                state.stack_push(state.get_pc())
+                state.set_pc(nnn)
             case 0x3:               # 3xnn skip one instr if vx == nn
                 if state.get_vx(n2) == nn:
                     state.increment_pc()
@@ -123,38 +131,39 @@ def main():
             case 0x7:               # 7xnn add value to register vx
                 new_value = state.get_vx(n2) + nn
                 state.set_vx(n2, new_value)
-                print(state)
-            # case 0x8:
-            #     match n4:
-            #         case 0x0:       # 8xy0 set
-            #             registers[n2] = registers[n3]
-            #         case 0x1:       # 8xy1 binary OR
-            #             registers[n2] = registers[n2] | registers[n3]
-            #         case 0x2:       # 8xy2 binary AND
-            #             registers[n2] = registers[n2] & registers[n3]
-            #         case 0x3:       # 8xy3 binary XOR
-            #             registers[n2] = registers[n2] ^ registers[n3]
-            #         case 0x4:       # 8xy4 add
-            #             registers[n2] = registers[n2] + registers[n3]
-            #         case 0x5:       # 8XY5 sets VX to the result of VX - VY
-            #             registers[0xf] = 1 if registers[n2] > registers[n3] else 0
-            #             registers[n2] = abs(registers[n2] - registers[n3])
-            #         case 0x7:       # 8XY7 sets VX to the result of VY - VX
-            #             registers[0xf] = 1 if registers[n3] > registers[n2] else 0
-            #             registers[n2] = abs(registers[n3] - registers[n2])
-            #         case 0x6:       # 8xy6 right shift
-            #             if NINETIES_SHIFT:
-            #                 registers[n2] = registers[n3]
-            #             registers[0xf] = n2 & 0x1 # grab the rightmost bit
-            #             registers[n2] = registers[n2] >> 1
-            #         case 0xe:       # 8xye left shift
-            #             if NINETIES_SHIFT:
-            #                 registers[n2] = registers[n3]
-            #             registers[0xf] = (n2 >> 7) & 0x1 # grab the leftmost bit
-            #             registers[n2] = registers[n2] << 1                       
-            # case 0x9:               # 9xy0 skips if the values in VX and VY are not equal
-            #     if registers[n2] != registers[n3]:
-            #         pc += 2
+            case 0x8:
+                match n4:
+                    case 0x0:       # 8xy0 set
+                        state.set_vx(n2,state.get_vx(n3))
+                    case 0x1:       # 8xy1 binary OR
+                        value = state.get_vx(n2) | state.get_vx(n3)
+                        state.set_vx(n2,value)
+                    case 0x2:       # 8xy2 binary AND
+                        value = state.get_vx(n2) & state.get_vx(n3)
+                        state.set_vx(n2,value)
+                    case 0x3:       # 8xy3 binary XOR
+                        value = state.get_vx(n2) ^ state.get_vx(n3)
+                        state.set_vx(n2,value)
+                    case 0x4:       # 8xy4 add
+                        value = state.get_vx(n2) + state.get_vx(n3)
+                        state.set_vx(n2,value)
+                    case 0x5:       # 8XY5 sets VX to the result of VX - VY
+                        state.set_vx(n2,subtract(state,n2,n3))
+                    case 0x7:       # 8XY7 sets VX to the result of VY - VX
+                        state.set_vx(n2,subtract(state,n3,n2))
+                    case 0x6:       # 8xy6 right shift
+                        if NINETIES_SHIFT:
+                            state.set_vx(n2, state.get_vx(n3))
+                        state.set_vx(0xf,(n2 & 0x1)) # grab the rightmost bit
+                        state.set_vx(n2, state.get_vx(n2) >> 1)
+                    case 0xe:       # 8xye left shift
+                        if NINETIES_SHIFT:
+                            state.set_vx(n2, state.get_vx(n3))
+                        state.set_vx(0xf,((n2 >> 7) & 0x1)) # grab the leftmost bit
+                        state.set_vx(n2, state.get_vx(n2) << 1)                  
+            case 0x9:               # 9xy0 skips if the values in VX and VY are not equal
+                if state.get_vx(n2) != state.get_vx(n3):
+                    state.increment_pc()
             case 0xa:               # annn set index register I
                 state.set_index(nnn)
             case 0xd:               # dxyn draw
@@ -166,23 +175,20 @@ def main():
             case 0xf:
                 match nn:
                     case 0x29:      # fx29 set I to font location for char x
-                        index = (n2 * 5) + FONTSTART
+                        state.set_index((n2 * 5) + FONTSTART)
                     case 0x33:      # fx33 BCD conversion
                         number1 = math.floor(nnn / 100)
                         number2 = math.floor((nnn - number1*100) / 10)
                         number3 = nnn - number1*100 - number2*10
-                        state.set_ram[index:index+3] = [number1, number2, number3]
-                    # case 0x55:      # fx55 store to memory
-                    #     bytecount = n2 + 1
-                    #     state.ram[index:index + bytecount] = registers[0:bytecount]
-                    # case 0x65:      # fx65 load from memory
-                    #     bytecount = n2 + 1
-                    #     registers[0:bytecount] = state.ram[index:index + bytecount]
-                    # case 0x1e:      # fx1e add to index
-                    #     index += n2
-                    #     if index >= 4096:
-                    #         registers[0xf] = 1
-                    #         index -= 4096
+                        state.set_ram([number1, number2, number3])
+                    case 0x55:      # fx55 store registers to memory
+                        for i in range(n2+1):
+                            state.set_ram(state.get_vx(i), state.get_index()+i)
+                    case 0x65:      # fx65 load registers from memory
+                        for i in range(n2+1):
+                            state.set_vx(i, state.get_ram(address=state.get_index()+i))
+                    case 0x1e:      # fx1e add to index
+                        state.set_index(n2, set_overflow=True)
                     case _:
                         raise NotImplementedError(f"Instruction not implemented: {instr.hex()}")
             case _:
