@@ -24,8 +24,26 @@ class Keyboard():
     def __init__(self):
         pygame.init()
     
+
+    def get_events(self):
+        actions = {'quit':False,'keydown':False}
+
+        for event in pygame.event.get():
+            # Check for Window Close (X button)
+            if event.type == pygame.QUIT:
+                actions['quit'] = True
+                
+            # Check for  Key Press
+            if event.type == pygame.KEYDOWN and event.key in self.keys.values():
+                found_key = next((key for key, value in self.keys.items() if value == event.key), None)
+                actions[found_key] = True
+                actions['keydown'] = True
+                    
+        return actions
+    
+    
     def is_pressed(self, key_hex:int = None):
-        keyboard_state = [False] * 16
+
         #1. individual actions
         if key_hex is None:
             for event in pygame.event.get():

@@ -82,17 +82,16 @@ def main():
         # 1. Check events
         wait_for_input = True
         
-        # Wait for keypress before executing frame
+        # Wait for keypress before executing frame (if in debug mode)
         while wait_for_input:
-            events = sdl2.ext.get_events()
-            if not events and not DEBUG:
-                wait_for_input = False
-            for event in events:
-                if event.type == sdl2.SDL_QUIT:
+            events = keyboard.get_events()
+            if events['quit']:
                     running = False
                     wait_for_input = False
-                elif event.type == sdl2.SDL_KEYDOWN:
-                    wait_for_input = False  # Advance to next frame
+            elif events['keydown']:
+                wait_for_input = False  # Advance to next frame
+            elif not DEBUG:
+                wait_for_input = False
 
         # sdl2.SDL_Delay(5)
         screen_updated = False
