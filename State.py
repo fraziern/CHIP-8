@@ -33,6 +33,9 @@ class State():
     
     def increment_pc(self, by=2):
         self.pc = (self.pc + by) % 4096
+    
+    def decrement_pc(self, by=2):
+        self.pc = (self.pc - by)
 
     def get_pc(self):
         return self.pc

@@ -1,29 +1,40 @@
-from sdl2.ext import input
-import sdl2.ext
+# import sdl2.ext
+import pygame
 
 class Keyboard():
 
-    keys = { 0:'x',
-            1:'1',
-            2:'2',
-            3:'3',
-            4:'q',
-            5:'w',
-            6:'e',
-            7:'a',
-            8:'s',
-            9:'d',
-            0xb:'c',
-            0xa:'z',
-            0xc:'4',
-            0xd:'r',
-            0xe:'f',
-            0xf:'v',
-            }
+    keys = { 0:pygame.K_x,
+        1:pygame.K_1,
+        2:pygame.K_2,
+        3:pygame.K_3,
+        4:pygame.K_q,
+        5:pygame.K_w,
+        6:pygame.K_e,
+        7:pygame.K_a,
+        8:pygame.K_s,
+        9:pygame.K_d,
+        0xa:pygame.K_z,
+        0xb:pygame.K_c,
+        0xc:pygame.K_4,
+        0xd:pygame.K_r,
+        0xe:pygame.K_f,
+        0xf:pygame.K_v,
+        }
 
     def __init__(self):
-        sdl2.ext.init()
-        self.events = None
+        pygame.init()
     
-    def is_pressed(self, events, key:int):
-        return input.key_pressed(events, self.keys[key])
+    def is_pressed(self, key_hex:int = None):
+        keyboard_state = [False] * 16
+        #1. individual actions
+        if key_hex is None:
+            for event in pygame.event.get():
+                if event.type == pygame.KEYUP and event.key in self.keys.values():
+                    found_key = next((key for key, value in self.keys.items() if value == event.key), None)
+                    return found_key
+            return False
+        
+        #2. Held down
+        key_to_check = self.keys[key_hex & 0xf] # mask to limit value to 0-f
+        keys_pressed = pygame.key.get_pressed()
+        return keys_pressed[key_to_check]

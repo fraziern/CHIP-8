@@ -1,11 +1,10 @@
 import time
 import sdl2
 import sdl2.ext
-from sdl2.ext import input
-import pygame
 from Display import Display
 from State import State
 from Beeper import Beeper
+from Keyboard import Keyboard
 
 DEBUG = False
 
@@ -16,44 +15,8 @@ beep_filename = r'C:\Users\Nick\source\repos\chip8\beep-09.wav'
 SIXTYHZ = 1/60  # Timer interval in seconds (approx 0.01667 seconds)
 NINETIES_SHIFT = False # use the CHIP-48 version of bit 
 
-keys = { 0:sdl2.SDL_SCANCODE_X,
-    1:sdl2.SDL_SCANCODE_1,
-    2:sdl2.SDL_SCANCODE_2,
-    3:sdl2.SDL_SCANCODE_3,
-    4:sdl2.SDL_SCANCODE_Q,
-    5:sdl2.SDL_SCANCODE_W,
-    6:sdl2.SDL_SCANCODE_E,
-    7:sdl2.SDL_SCANCODE_A,
-    8:sdl2.SDL_SCANCODE_S,
-    9:sdl2.SDL_SCANCODE_D,
-    0xb:sdl2.SDL_SCANCODE_C,
-    0xa:sdl2.SDL_SCANCODE_Z,
-    0xc:sdl2.SDL_SCANCODE_4,
-    0xd:sdl2.SDL_SCANCODE_R,
-    0xe:sdl2.SDL_SCANCODE_F,
-    0xf:sdl2.SDL_SCANCODE_V,
-    }
-
-# keys = { 0:pygame.K_x,
-#     1:pygame.K_1,
-#     2:pygame.K_2,
-#     3:pygame.K_3,
-#     4:pygame.K_q,
-#     5:pygame.K_w,
-#     6:pygame.K_e,
-#     7:pygame.K_a,
-#     8:pygame.K_s,
-#     9:pygame.K_d,
-#     0xb:pygame.K_c,
-#     0xa:pygame.K_z,
-#     0xc:pygame.K_4,
-#     0xd:pygame.K_r,
-#     0xe:pygame.K_f,
-#     0xf:pygame.K_v,
-#     }
 
 sdl2.ext.init()
-pygame.init()
 
 # instr will be a 2 byte opcode
 def decode_instruction(instr:bytearray):
@@ -70,16 +33,6 @@ def decode_instruction(instr:bytearray):
     nnn = (n2 << 8) | (n3 << 4) | n4
 
     return n1, n2, n3, n4, nn, nnn
-
-
-def update_key_state(events, state:State):
-
-    
-    for key in keys:
-        if input.key_pressed(events, keys[key]):
-            state.set_key_state(key,True)
-        else:
-            state.set_key_state(key,False)
 
 
 def subtract(state, a, b): 
@@ -102,8 +55,7 @@ def main():
     state = State()
     display = Display()
     beeper = Beeper(beep_filename)
-    keyboard_state = sdl2.SDL_GetKeyboardState(None)
-    # keyboard = Keyboard()
+    keyboard = Keyboard()
 
     #####################################################
     ### load the font rom
@@ -126,27 +78,21 @@ def main():
         print("Press any key to advance to next frame.")
 
     while(running):
-        # keyboard_state = pygame.key.get_pressed()
     
         # 1. Check events
         wait_for_input = True
         
-        # # Wait for keypress before executing frame
-        # while wait_for_input:
-        #     events = sdl2.ext.get_events()
-        #     if not events and not DEBUG:
-        #         wait_for_input = False
-        #     for event in events:
-        #         if event.type == sdl2.SDL_QUIT:
-        #             running = False
-        #             wait_for_input = False
-        #         elif event.type == sdl2.SDL_KEYDOWN:
-        #             wait_for_input = False  # Advance to next frame
-        events = sdl2.ext.get_events()
-        for event in events:
-            if event.type == sdl2.SDL_QUIT:
-                running = False
-
+        # Wait for keypress before executing frame
+        while wait_for_input:
+            events = sdl2.ext.get_events()
+            if not events and not DEBUG:
+                wait_for_input = False
+            for event in events:
+                if event.type == sdl2.SDL_QUIT:
+                    running = False
+                    wait_for_input = False
+                elif event.type == sdl2.SDL_KEYDOWN:
+                    wait_for_input = False  # Advance to next frame
 
         # sdl2.SDL_Delay(5)
         screen_updated = False
@@ -180,6 +126,8 @@ def main():
                         screen_updated = True
                     case 0xee:      # 00ee return from subroutine
                         state.set_pc(state.stack_pop())
+                    case _:
+                        raise NotImplementedError(f"Instruction not implemented: {instr.hex()}")
             case 0x1:               # 1nnn jump
                 state.set_pc(nnn)
             case 0x2:               # 2nnn call subroutine
@@ -228,7 +176,9 @@ def main():
                         if NINETIES_SHIFT:
                             state.set_vx(n2, state.get_vx(n3))
                         state.set_vx(0xf,((state.get_vx(n2) >> 7) & 0x1)) # grab the leftmost bit
-                        state.set_vx(n2, state.get_vx(n2) << 1)                  
+                        state.set_vx(n2, state.get_vx(n2) << 1)
+                    case _:
+                        raise NotImplementedError(f"Instruction not implemented: {instr.hex()}")              
             case 0x9:               # 9xy0 skips if the values in VX and VY are not equal
                 if state.get_vx(n2) != state.get_vx(n3):
                     state.increment_pc()
@@ -244,17 +194,23 @@ def main():
             case 0xe:
                 match nn:
                     case 0x9e:      # ex9e skip if vx key pressed
-                        key_to_check = keys[state.get_vx(n2) & 0xf]
-                        if keyboard_state[key_to_check]:
+                        if keyboard.is_pressed(state.get_vx(n2)):
                             state.increment_pc()
                     case 0xa1:      # exa1 skip if vx key not pressed
-                        key_to_check = keys[state.get_vx(n2) & 0xf]
-                        if not keyboard_state[key_to_check]:
+                        if not keyboard.is_pressed(state.get_vx(n2)):
                             state.increment_pc()
+                    case _:
+                        raise NotImplementedError(f"Instruction not implemented: {instr.hex()}")
             case 0xf:
                 match nn:
                     case 0x07:      # fx07 get delay timer
                         state.set_vx(n2, state.get_delay_timer())
+                    case 0x0a:      # fx0a get key
+                        keypress = keyboard.is_pressed()
+                        if not keypress:
+                            state.decrement_pc()
+                        else:
+                            state.set_vx(n2, keypress)
                     case 0x15:      # fx15 set delay timer to vx
                         state.set_delay_timer(state.get_vx(n2))
                     case 0x18:      # fx18 set sound timer to vx
@@ -281,7 +237,7 @@ def main():
 
         # 5. Update display
         if screen_updated:
-            display.render_screen() # TODO: only redraw screen when theres a display instruction
+            display.render_screen()
 
     sdl2.ext.quit()
 
