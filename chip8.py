@@ -1,4 +1,5 @@
 import time
+import random
 import sdl2
 import sdl2.ext
 from Display import Display
@@ -8,7 +9,7 @@ from Keyboard import Keyboard
 
 DEBUG = False
 
-rom_filename = r'C:\Users\Nick\source\repos\chip8\roms\6-keypad.ch8'
+rom_filename = r'C:\Users\Nick\source\repos\chip8\roms\Maze [David Winter, 199x].ch8'
 font_filename = r'C:\Users\Nick\source\repos\chip8\roms\font.ch8'
 beep_filename = r'C:\Users\Nick\source\repos\chip8\beep-09.wav'
 
@@ -16,7 +17,7 @@ SIXTYHZ = 1/60  # Timer interval in seconds (approx 0.01667 seconds)
 NINETIES_SHIFT = False # use the CHIP-48 version of bit 
 
 
-sdl2.ext.init()
+# sdl2.ext.init()
 
 # instr will be a 2 byte opcode
 def decode_instruction(instr:bytearray):
@@ -183,6 +184,9 @@ def main():
                     state.increment_pc()
             case 0xa:               # annn set index register I
                 state.set_index(nnn)
+            case 0xc:               # cxnn random
+                r = random.randint(0,0xff)
+                state.set_vx(n2,(nn & r))
             case 0xd:               # dxyn draw
                 x = state.get_vx(n2)
                 y = state.get_vx(n3)
@@ -238,7 +242,7 @@ def main():
         if screen_updated:
             display.render_screen()
 
-    sdl2.ext.quit()
+    sdl2.ext.quit() # TODO move this to display?
 
 
 if __name__ == "__main__":

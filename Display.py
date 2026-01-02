@@ -15,8 +15,8 @@ class Display:
     WIDTH = (LWIDTH * PIXWIDTH) + ((LWIDTH + 1) * PADDING)
     HEIGHT = (LHEIGHT * PIXHEIGHT) + ((LHEIGHT + 1) * PADDING)
 
-    WHITE = sdl2.ext.Color(255, 255, 255)
-    BLACK = sdl2.ext.Color(0, 0, 0)
+    WHITE = sdl2.ext.Color(255, 204, 2)
+    BLACK = sdl2.ext.Color(153, 103, 0)
 
 
     def __init__(self):
