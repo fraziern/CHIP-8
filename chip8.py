@@ -1,8 +1,6 @@
 import time
 import random
-import sdl2
-import sdl2.ext
-from Display import Display
+from PygameDisplay import Display
 from State import State
 from Beeper import Beeper
 from Keyboard import Keyboard
@@ -14,7 +12,8 @@ font_filename = r'C:\Users\Nick\source\repos\chip8\roms\font.ch8'
 beep_filename = r'C:\Users\Nick\source\repos\chip8\beep-09.wav'
 
 SIXTYHZ = 1/60  # Timer interval in seconds (approx 0.01667 seconds)
-NINETIES_SHIFT = False # use the CHIP-48 version of bit 
+NINETIES_SHIFT = False # use the CHIP-48 version of bit shift
+NINETIES_BNNN = False # use CHIP-48 version of jump with offset
 
 
 # sdl2.ext.init()
@@ -127,7 +126,7 @@ def main():
                     case 0xee:      # 00ee return from subroutine
                         state.set_pc(state.stack_pop())
                     case _:
-                        raise NotImplementedError(f"Instruction not implemented: {instr.hex()}")
+                        raise SyntaxError(f"Instruction not recognized: {instr.hex()}")
             case 0x1:               # 1nnn jump
                 state.set_pc(nnn)
             case 0x2:               # 2nnn call subroutine
@@ -178,12 +177,17 @@ def main():
                         state.set_vx(0xf,((state.get_vx(n2) >> 7) & 0x1)) # grab the leftmost bit
                         state.set_vx(n2, state.get_vx(n2) << 1)
                     case _:
-                        raise NotImplementedError(f"Instruction not implemented: {instr.hex()}")              
+                        raise SyntaxError(f"Instruction not recognized: {instr.hex()}")              
             case 0x9:               # 9xy0 skips if the values in VX and VY are not equal
                 if state.get_vx(n2) != state.get_vx(n3):
                     state.increment_pc()
             case 0xa:               # annn set index register I
                 state.set_index(nnn)
+            case 0xb:               # bnnn jump with offset
+                if NINETIES_BNNN:
+                    state.set_pc(nnn+state.get_vx(n2))
+                else:
+                    state.set_pc(nnn)
             case 0xc:               # cxnn random
                 r = random.randint(0,0xff)
                 state.set_vx(n2,(nn & r))
@@ -203,7 +207,7 @@ def main():
                         if not keyboard.is_pressed(state.get_vx(n2)):
                             state.increment_pc()
                     case _:
-                        raise NotImplementedError(f"Instruction not implemented: {instr.hex()}")
+                        raise SyntaxError(f"Instruction not recognized: {instr.hex()}")
             case 0xf:
                 match nn:
                     case 0x07:      # fx07 get delay timer
@@ -234,15 +238,13 @@ def main():
                         for i in range(n2+1):
                             state.set_vx(i, state.get_ram(address=state.get_index()+i))
                     case _:
-                        raise NotImplementedError(f"Instruction not implemented: {instr.hex()}")
-            case _:
-                raise NotImplementedError(f"Instruction not implemented: {instr.hex()}")
+                        raise SyntaxError(f"Instruction not recognized: {instr.hex()}")
 
         # 5. Update display
         if screen_updated:
             display.render_screen()
 
-    sdl2.ext.quit() # TODO move this to display?
+    display.quit()
 
 
 if __name__ == "__main__":

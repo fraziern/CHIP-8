@@ -1,4 +1,4 @@
-import sdl2
+import pygame
 
 # This will take care of memory mapping and displaying
 class Display:
@@ -15,18 +15,19 @@ class Display:
     WIDTH = (LWIDTH * PIXWIDTH) + ((LWIDTH + 1) * PADDING)
     HEIGHT = (LHEIGHT * PIXHEIGHT) + ((LHEIGHT + 1) * PADDING)
 
-    WHITE = sdl2.ext.Color(255, 204, 2)
-    BLACK = sdl2.ext.Color(153, 103, 0)
+    WHITE = (255, 204, 2)
+    BLACK = (153, 103, 0)
 
 
     def __init__(self):
         self.mm_screen = [[0 for j in range(self.LWIDTH)] for i in range(self.LHEIGHT)]
-        sdl2.ext.init()  # safe to call more than once
+        pygame.init()  # safe to call more than once
 
-        self.window = sdl2.ext.Window("CHIP-8", size=(self.WIDTH, self.HEIGHT))
-        self.windowrenderer = sdl2.ext.Renderer(self.window)
+        self.window = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
+        pygame.display.set_caption("CHIP-8")
 
-        self.window.show()
+        self.window.fill(self.BLACK)
+        pygame.display.flip()
 
     
     # helper function to get list of bits from a byte
@@ -89,25 +90,29 @@ class Display:
 
     def clear_screen(self):
         self.mm_screen = [[0 for j in range(self.LWIDTH)] for i in range(self.LHEIGHT)]
-        self.windowrenderer.clear(self.BLACK)
+        self.window.fill(self.BLACK)
 
 
     def _draw(self, logical_x, logical_y):
         # draw a pixel
         x = self.PADDING + logical_x * (self.PIXWIDTH + self.PADDING)
         y = self.PADDING + logical_y * (self.PIXHEIGHT + self.PADDING)
-        self.windowrenderer.fill((x, y, self.PIXWIDTH, self.PIXHEIGHT), self.WHITE)
+        pixel = pygame.Rect(x, y, self.PIXWIDTH, self.PIXHEIGHT)
+        pygame.draw.rect(self.window, self.WHITE, pixel)
 
 
     def render_screen(self):        
-        self.windowrenderer.clear(self.BLACK)
+        self.window.fill(self.BLACK)
 
         for y in range(self.LHEIGHT):            
             for x in range(self.LWIDTH):
                 if self.mm_screen[y][x]:
                     self._draw(x, y)
         
-        self.windowrenderer.present()
+        pygame.display.flip()
+    
 
-
-  
+    def quit(self):
+        # Perform cleanup actions
+        if self.window:
+            pygame.quit() # This single call handles all sdl2.ext resources
