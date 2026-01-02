@@ -9,6 +9,7 @@ class State():
         self.delay_timer = 0
         self.sound_timer = 0
         self.stack = []
+        self.key_state = [False]*16
         self.ram = bytearray(4096)
 
     def __str__(self):
@@ -76,14 +77,19 @@ class State():
     def set_delay_timer(self, value):
         self.delay_timer = value
     
+    def get_delay_timer(self):
+        return self.delay_timer
+    
     def set_sound_timer(self, value):
         self.sound_timer = value
     
     def decrement_delay_timer(self):
         self.delay_timer = max(self.delay_timer - 1, 0)
+        return self.delay_timer
 
     def decrement_sound_timer(self):
         self.sound_timer = max(self.sound_timer - 1, 0)  
+        return self.sound_timer
 
     def stack_push(self, value):
         self.stack.append(value)
@@ -93,3 +99,20 @@ class State():
             raise IndexError("Attempting to pop from empty stack.")
         return self.stack.pop()
     
+    def clear_key_state(self):
+        self.key_state = [False]*16
+    
+    def set_key_state(self,key:int,value:bool):
+        if key >= 16 or key < 0:
+            raise ValueError("Key value out of range.")
+        if type(value) != bool:
+            raise TypeError("Key state value must be a boolean.")
+        self.key_state[key] = value
+    
+    def get_key_state(self,key=None):
+        if key == None:
+            return self.key_state
+        elif key >= 16 or key < 0:
+            raise ValueError("Key value out of range.")
+        else:
+            return self.key_state[key]
