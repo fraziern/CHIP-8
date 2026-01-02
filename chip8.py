@@ -2,6 +2,7 @@ import time
 import sdl2
 import sdl2.ext
 from sdl2.ext import input
+import pygame
 from Display import Display
 from State import State
 from Beeper import Beeper
@@ -33,7 +34,26 @@ keys = { 0:sdl2.SDL_SCANCODE_X,
     0xf:sdl2.SDL_SCANCODE_V,
     }
 
+# keys = { 0:pygame.K_x,
+#     1:pygame.K_1,
+#     2:pygame.K_2,
+#     3:pygame.K_3,
+#     4:pygame.K_q,
+#     5:pygame.K_w,
+#     6:pygame.K_e,
+#     7:pygame.K_a,
+#     8:pygame.K_s,
+#     9:pygame.K_d,
+#     0xb:pygame.K_c,
+#     0xa:pygame.K_z,
+#     0xc:pygame.K_4,
+#     0xd:pygame.K_r,
+#     0xe:pygame.K_f,
+#     0xf:pygame.K_v,
+#     }
+
 sdl2.ext.init()
+pygame.init()
 
 # instr will be a 2 byte opcode
 def decode_instruction(instr:bytearray):
@@ -106,6 +126,7 @@ def main():
         print("Press any key to advance to next frame.")
 
     while(running):
+        # keyboard_state = pygame.key.get_pressed()
     
         # 1. Check events
         wait_for_input = True
@@ -125,7 +146,7 @@ def main():
         for event in events:
             if event.type == sdl2.SDL_QUIT:
                 running = False
-        # update_key_state(events, state)
+
 
         # sdl2.SDL_Delay(5)
         screen_updated = False
@@ -223,11 +244,11 @@ def main():
             case 0xe:
                 match nn:
                     case 0x9e:      # ex9e skip if vx key pressed
-                        key_to_check = keys[state.get_vx(n2) & 0x1]
+                        key_to_check = keys[state.get_vx(n2) & 0xf]
                         if keyboard_state[key_to_check]:
                             state.increment_pc()
                     case 0xa1:      # exa1 skip if vx key not pressed
-                        key_to_check = keys[state.get_vx(n2) & 0x1]
+                        key_to_check = keys[state.get_vx(n2) & 0xf]
                         if not keyboard_state[key_to_check]:
                             state.increment_pc()
             case 0xf:
