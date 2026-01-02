@@ -7,16 +7,14 @@ from Keyboard import Keyboard
 
 DEBUG = False
 
-rom_filename = r'C:\Users\Nick\source\repos\chip8\roms\Maze [David Winter, 199x].ch8'
+rom_filename = r'C:\Users\Nick\source\repos\chip8\roms\4-flags.ch8'
 font_filename = r'C:\Users\Nick\source\repos\chip8\roms\font.ch8'
 beep_filename = r'C:\Users\Nick\source\repos\chip8\beep-09.wav'
 
 SIXTYHZ = 1/60  # Timer interval in seconds (approx 0.01667 seconds)
-NINETIES_SHIFT = False # use the CHIP-48 version of bit shift
+NINETIES_SHIFT = True # use the CHIP-48 version of bit shift
 NINETIES_BNNN = False # use CHIP-48 version of jump with offset
 
-
-# sdl2.ext.init()
 
 # instr will be a 2 byte opcode
 def decode_instruction(instr:bytearray):
@@ -35,18 +33,55 @@ def decode_instruction(instr:bytearray):
     return n1, n2, n3, n4, nn, nnn
 
 
-def subtract(state, a, b): 
-    # function for 8xy5 and 8xy7, subtracts a - b and updates state,
-    # returns value. does NOT set vx
-    carry = 1
-    value = state.get_vx(a) - state.get_vx(b)
-    if value < 0:  # emulate underflow
-        carry = 0
-        value = (value + 256) % 256
-    state.set_vx(0xf,carry)
-    return value
+def add(state, a, b, result_to=None):
+    if result_to is None:
+        result_to = a
+    value = state.get_vx(a) + state.get_vx(b)
+    value, vf = (value % 256, 1) if value > 255 else (value, 0)
+    state.set_vx(result_to,value)
+    state.set_vx(0xf,vf) # carry
 
-    
+
+def subtract(state, a, b, result_to=None): 
+    # function for 8xy5 and 8xy7, subtracts a - b and updates state
+    if result_to is None:
+        result_to = a
+    value = state.get_vx(a) - state.get_vx(b)
+    value, vf = ((value + 256) % 256, 0) if value < 0 else (value, 1)
+    state.set_vx(result_to,value)
+    state.set_vx(0xf, vf)
+
+
+def right_shift(state, a, b, result_to=None):
+    # 8xy6
+    if result_to is None:
+        result_to = a
+    if NINETIES_SHIFT:
+        state.set_vx(a, state.get_vx(b))
+    vf = state.get_vx(a) & 0x1 # grab the rightmost bit
+    state.set_vx(a, state.get_vx(a) >> 1)
+    state.set_vx(0xf, vf)
+
+
+def left_shift(state, a, b, result_to=None):
+    # 8xye
+    if result_to is None:
+        result_to = a
+    if NINETIES_SHIFT:
+        state.set_vx(a, state.get_vx(b))
+    vf = (state.get_vx(a) >> 7) & 0x1 # grab the leftmost bit
+    state.set_vx(a, state.get_vx(a) << 1)
+    state.set_vx(0xf, vf)
+
+
+def draw_instr(state, display, vx, vy, n):
+    x = state.get_vx(vx)
+    y = state.get_vx(vy)
+    sprite = state.get_ram(n)
+    vf = display.update_screen(x, y, sprite)
+    state.set_vx(0xf, vf)
+
+
 def main():
     
     ROMSTART = 0x200
@@ -159,23 +194,16 @@ def main():
                     case 0x3:       # 8xy3 binary XOR
                         value = state.get_vx(n2) ^ state.get_vx(n3)
                         state.set_vx(n2,value)
-                    case 0x4:       # 8xy4 add
-                        value = state.get_vx(n2) + state.get_vx(n3)
-                        state.set_vx(n2,value)
+                    case 0x4:       # 8xy4 add with carry
+                        add(state, n2, n3, result_to=n2)
                     case 0x5:       # 8XY5 sets VX to the result of VX - VY
-                        state.set_vx(n2,subtract(state,n2,n3))
+                        subtract(state,n2,n3)
                     case 0x6:       # 8xy6 right shift
-                        if NINETIES_SHIFT:
-                            state.set_vx(n2, state.get_vx(n3))
-                        state.set_vx(0xf,(state.get_vx(n2) & 0x1)) # grab the rightmost bit
-                        state.set_vx(n2, state.get_vx(n2) >> 1)
+                        right_shift(state, n2, n3)
                     case 0x7:       # 8XY7 sets VX to the result of VY - VX
-                        state.set_vx(n2,subtract(state,n3,n2))
+                        subtract(state, n3, n2, result_to=n2)
                     case 0xe:       # 8xye left shift
-                        if NINETIES_SHIFT:
-                            state.set_vx(n2, state.get_vx(n3))
-                        state.set_vx(0xf,((state.get_vx(n2) >> 7) & 0x1)) # grab the leftmost bit
-                        state.set_vx(n2, state.get_vx(n2) << 1)
+                        left_shift(state, n2, n3)
                     case _:
                         raise SyntaxError(f"Instruction not recognized: {instr.hex()}")              
             case 0x9:               # 9xy0 skips if the values in VX and VY are not equal
@@ -192,12 +220,8 @@ def main():
                 r = random.randint(0,0xff)
                 state.set_vx(n2,(nn & r))
             case 0xd:               # dxyn draw
-                x = state.get_vx(n2)
-                y = state.get_vx(n3)
-                sprite = state.get_ram(n4)
-                display.update_screen(x, y, sprite)
+                draw_instr(state, display, n2, n3, n4)
                 screen_updated = True
-                # TODO set vf
             case 0xe:
                 match nn:
                     case 0x9e:      # ex9e skip if vx key pressed
