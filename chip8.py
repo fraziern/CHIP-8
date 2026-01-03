@@ -9,7 +9,7 @@ from debug_utils import get_instr_definition
 
 DEBUG = False
 
-rom_filename = r'C:\Users\Nick\source\repos\chip8\roms\games\15 Puzzle [Roger Ivie] (alt).ch8'
+rom_filename = r'C:\Users\Nick\source\repos\chip8\roms\6-keypad.ch8'
 font_filename = r'C:\Users\Nick\source\repos\chip8\roms\font.ch8'
 beep_filename = r'C:\Users\Nick\source\repos\chip8\beep-09.wav'
 
@@ -56,18 +56,22 @@ def main():
     while(running):
     
         # 1. Check events
-        wait_for_input = True
+        # wait_for_input = True
         
-        # Wait for keypress before executing frame (if in debug mode)
-        while wait_for_input:
-            events = keyboard.get_events()
-            if events['quit']:
-                    running = False
-                    wait_for_input = False
-            elif events['keydown']:
-                wait_for_input = False  # Advance to next frame
-            elif not DEBUG:
-                wait_for_input = False
+        # # Wait for keypress before executing frame (if in debug mode)
+        # while wait_for_input:
+        #     events = keyboard.get_events()
+        #     if events['quit']:
+        #             running = False
+        #             wait_for_input = False
+        #     elif events['keydown']:
+        #         wait_for_input = False  # Advance to next frame
+        #     elif not DEBUG:
+        #         wait_for_input = False
+        keyboard.get_state()
+        if (keyboard.request_quit):
+            running = False
+        # TODO fix debug mode
 
         clock.tick(IPS)
         screen_updated = False  # only update screen if needed
