@@ -6,19 +6,18 @@ from Beeper import Beeper
 from Keyboard import Keyboard
 from CPU import CPU
 
-DEBUG = False
 
 rom_filename = r'C:\Users\Nick\source\repos\chip8\roms\games\Breakout [Carmelo Cortez, 1979].ch8'
 font_filename = r'C:\Users\Nick\source\repos\chip8\roms\font.ch8'
 beep_filename = r'C:\Users\Nick\source\repos\chip8\beep-09.wav'
 
-SIXTYHZ = 1/60  # Timer interval in seconds (approx 0.01667 seconds)
-config = { 'nineties_shift':False, # use the CHIP-48 version of bit shift
-          'nineties_bnnn':False, # use CHIP-48 version of jump with offset
-          'debug':False,
-          }
+DEBUG = False
 FPS = 60 # Frames per second
 CYCLES_PER_FRAME = 15
+cpu_config = { 'nineties_shift':False, # use the CHIP-48 version of bit shift
+          'nineties_bnnn':False, # use CHIP-48 version of jump with offset
+          'debug':DEBUG,
+          }
 
 
 def main():
@@ -29,7 +28,7 @@ def main():
     display = Display()
     beeper = Beeper(beep_filename)
     keyboard = Keyboard()
-    cpu = CPU(state, keyboard, display, config)
+    cpu = CPU(state, keyboard, display, cpu_config)
 
     ROMSTART = cpu.ROMSTART
     FONTSTART = cpu.FONTSTART
@@ -56,22 +55,14 @@ def main():
     while(running):
     
         # 1. Check events
-        # wait_for_input = True
-        
-        # # Wait for keypress before executing frame (if in debug mode)
-        # while wait_for_input:
-        #     events = keyboard.get_events()
-        #     if events['quit']:
-        #             running = False
-        #             wait_for_input = False
-        #     elif events['keydown']:
-        #         wait_for_input = False  # Advance to next frame
-        #     elif not DEBUG:
-        #         wait_for_input = False
-        keyboard.get_state()
-        if (keyboard.request_quit):
-            running = False
-        # TODO fix debug mode
+        wait_for_input = True
+        while (wait_for_input):
+            keyboard.get_state()
+            if (keyboard.request_quit):
+                running = False
+                wait_for_input = False
+            elif (keyboard.is_pressed() or DEBUG != True):
+                wait_for_input = False
 
         # 2. Manage timers
         state.decrement_delay_timer()
@@ -82,7 +73,8 @@ def main():
             beeper.stop()
 
         # 3. cpu cycle
-        for _ in range(CYCLES_PER_FRAME):
+        actual_cps = CYCLES_PER_FRAME if not DEBUG else 1
+        for _ in range(actual_cps):
             cpu.run_cycle()
 
         # 4. Update display

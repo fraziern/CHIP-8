@@ -30,24 +30,6 @@ class Keyboard():
         self.request_quit = False
     
 
-    # def get_events(self):
-    #     actions = {'quit':False,'keydown':False}
-
-    #     for event in pygame.event.get():
-    #         print(event)
-    #         # Check for Window Close (X button)
-    #         if event.type == pygame.QUIT:
-    #             actions['quit'] = True
-                
-    #         # Check for  Key Press
-    #         if event.type == pygame.KEYDOWN and event.key in self.keytable.keys():
-    #             found_key = self.keytable[event.key]
-    #             actions[found_key] = True
-    #             actions['keydown'] = True
-                    
-    #     return actions
-    
-
     def get_state(self):
         # print(self.current_state, end="\r", flush=True)
         self.previous_state = self.current_state.copy()
