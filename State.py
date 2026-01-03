@@ -14,7 +14,7 @@ class State():
 
     def __str__(self):
         string = ""
-        string += f'PC: {self.pc:X}\n'
+        string += f'Index: {self.index:X}\n'
         string += f'Registers: {self.registers.hex(" ")}'
         return string
 

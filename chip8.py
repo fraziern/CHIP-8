@@ -1,19 +1,22 @@
 import time
 import random
+import pygame
 from PygameDisplay import Display
 from State import State
 from Beeper import Beeper
 from Keyboard import Keyboard
+from debug_utils import get_instr_definition
 
 DEBUG = False
 
-rom_filename = r'C:\Users\Nick\source\repos\chip8\roms\4-flags.ch8'
+rom_filename = r'C:\Users\Nick\source\repos\chip8\roms\games\15 Puzzle [Roger Ivie] (alt).ch8'
 font_filename = r'C:\Users\Nick\source\repos\chip8\roms\font.ch8'
 beep_filename = r'C:\Users\Nick\source\repos\chip8\beep-09.wav'
 
 SIXTYHZ = 1/60  # Timer interval in seconds (approx 0.01667 seconds)
 NINETIES_SHIFT = True # use the CHIP-48 version of bit shift
-NINETIES_BNNN = False # use CHIP-48 version of jump with offset
+NINETIES_BNNN = True # use CHIP-48 version of jump with offset
+IPS = 700 # Instructions per second
 
 
 # instr will be a 2 byte opcode
@@ -105,13 +108,14 @@ def main():
         state.set_ram(full_rom, ROMSTART)
 
 
-    ### MAIN LOOP
     start_time = time.perf_counter()
     frame_count = 0
+    clock = pygame.time.Clock()
     running = True
     if DEBUG:
         print("Press any key to advance to next frame.")
 
+    ### MAIN LOOP
     while(running):
     
         # 1. Check events
@@ -128,15 +132,15 @@ def main():
             elif not DEBUG:
                 wait_for_input = False
 
-        # sdl2.SDL_Delay(5)
-        screen_updated = False
+        clock.tick(IPS)
+        screen_updated = False  # only update screen if needed
 
         # 2. Manage timers
         current_time = time.perf_counter()
         elapsed_time = current_time - start_time
         if elapsed_time >= SIXTYHZ:
             start_time = current_time
-            delay_tx_value = state.decrement_delay_timer()
+            state.decrement_delay_timer()
             sound_tx_value = state.decrement_sound_timer()
             if sound_tx_value > 0:
                 beeper.play()
@@ -146,12 +150,14 @@ def main():
         # 3. Fetch instruction
         instr = state.get_ram_at_pc()
         frame_count += 1
-        if DEBUG:
-            print(f'Instruction {state.get_pc()-ROMSTART:X}: {instr.hex()}')
         state.increment_pc()
         
         # 4. Decode/Execute instruction
         n1, n2, n3, n4, nn, nnn = decode_instruction(instr)
+        if DEBUG:
+            definition = get_instr_definition(n1, n2, n3, n4, nn, nnn)
+            print(f'Instruction {state.get_pc()-ROMSTART:X}: {instr.hex()} {definition}')
+
         match n1:
             case 0x0:
                 match nn:
@@ -250,7 +256,7 @@ def main():
                         value = state.get_index() + state.get_vx(n2)
                         state.set_index(value, set_overflow=True)
                     case 0x29:      # fx29 set I to font location for char x
-                        state.set_index((n2 * 5) + FONTSTART)
+                        state.set_index((state.get_vx(n2) * 5) + FONTSTART)
                     case 0x33:      # fx33 BCD conversion
                         bcd = state.get_vx(n2)
                         bcd_list = [(bcd//100),(bcd%100)//10,bcd%10]
@@ -267,6 +273,9 @@ def main():
         # 5. Update display
         if screen_updated:
             display.render_screen()
+        
+        if(DEBUG):
+            print(state)
 
     display.quit()
 
