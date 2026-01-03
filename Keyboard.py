@@ -55,9 +55,9 @@ class Keyboard():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.request_quit = True
-            if event.type == pygame.KEYDOWN and event.key in self.keytable.keys():
+            elif event.type == pygame.KEYDOWN and event.key in self.keytable:
                 self.current_state[self.keytable[event.key]] = True
-            elif event.type == pygame.KEYUP and event.key in self.keytable.keys():
+            elif event.type == pygame.KEYUP and event.key in self.keytable:
                 self.current_state[self.keytable[event.key]] = False
         
     

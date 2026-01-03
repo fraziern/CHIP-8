@@ -82,7 +82,6 @@ class CPU():
     def run_cycle(self):
         # 3. Fetch instruction
         instr = self.state.get_ram_at_pc()
-        frame_count += 1
         self.state.increment_pc()
         
         # 4. Decode/Execute instruction
@@ -176,7 +175,7 @@ class CPU():
                     case 0x07:      # fx07 get delay timer
                         self.state.set_vx(n2, self.state.get_delay_timer())
                     case 0x0a:      # fx0a get key
-                        keypress = keyboard.is_pressed()
+                        keypress = self.keyboard.is_pressed()
                         if not keypress:
                             self.state.decrement_pc()
                         else:
@@ -189,7 +188,7 @@ class CPU():
                         value = self.state.get_index() + self.state.get_vx(n2)
                         self.state.set_index(value, set_overflow=True)
                     case 0x29:      # fx29 set I to font location for char x
-                        self.state.set_index((self.state.get_vx(n2) * 5) + FONTSTART)
+                        self.state.set_index((self.state.get_vx(n2) * 5) + self.FONTSTART)
                     case 0x33:      # fx33 BCD conversion
                         bcd = self.state.get_vx(n2)
                         bcd_list = [(bcd//100),(bcd%100)//10,bcd%10]
