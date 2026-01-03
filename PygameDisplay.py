@@ -90,7 +90,7 @@ class Display:
 
     def clear_screen(self):
         self.mm_screen = [[0 for j in range(self.LWIDTH)] for i in range(self.LHEIGHT)]
-        self.window.fill(self.BLACK)
+        # self.window.fill(self.BLACK)
 
 
     def _draw(self, logical_x, logical_y):
