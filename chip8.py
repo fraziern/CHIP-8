@@ -7,12 +7,12 @@ from Keyboard import Keyboard
 from CPU import CPU
 
 
-rom_filename = r'C:\Users\Nick\source\repos\chip8\roms\games\Breakout [Carmelo Cortez, 1979].ch8'
+rom_filename = r'C:\Users\Nick\source\repos\chip8\roms\games\Tetris [Fran Dachille, 1991].ch8'
 font_filename = r'C:\Users\Nick\source\repos\chip8\roms\font.ch8'
 beep_filename = r'C:\Users\Nick\source\repos\chip8\beep-09.wav'
 
 DEBUG = False
-FPS = 60 # Frames per second
+FPS = 60 # Frames per second - do not change!
 CYCLES_PER_FRAME = 15
 cpu_config = { 'nineties_shift':False, # use the CHIP-48 version of bit shift
           'nineties_bnnn':False, # use CHIP-48 version of jump with offset

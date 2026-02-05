@@ -15,11 +15,17 @@ class Display:
     WIDTH = (LWIDTH * PIXWIDTH) + ((LWIDTH + 1) * PADDING)
     HEIGHT = (LHEIGHT * PIXHEIGHT) + ((LHEIGHT + 1) * PADDING)
 
-    WHITE = (255, 204, 2)
-    BLACK = (153, 103, 0)
+    WHITE = pygame.Color(255, 204, 2)
+    BLACK = pygame.Color(153, 103, 0)
+    WHITE_FADE1 = WHITE.lerp(BLACK, 0.3)
+    WHITE_FADE2 = WHITE.lerp(BLACK, 0.7)
 
 
     def __init__(self):
+        # There are 2 "screens" here...
+        # mm_screen     a memory map of a monochrome screen
+        # window        a pygame display object
+
         self.mm_screen = [[0 for j in range(self.LWIDTH)] for i in range(self.LHEIGHT)]
         pygame.init()  # safe to call more than once
 
@@ -39,7 +45,7 @@ class Display:
             bits_list.append(bit)
         return bits_list
     
-
+    # helper function to update screen array with x/y coords
     def _update_screen_row(self, x:int, y:int, sprite_row:int) -> bool:
         if y >= len(self.mm_screen):
             raise ValueError("Out of range when drawing screen.")
@@ -88,26 +94,37 @@ class Display:
         return vf
 
 
+    def _draw(self, logical_x, logical_y, should_fill:bool):
+        # draw a pixel
+        x = self.PADDING + logical_x * (self.PIXWIDTH + self.PADDING)
+        y = self.PADDING + logical_y * (self.PIXHEIGHT + self.PADDING)
+        pixel = pygame.Rect(x, y, self.PIXWIDTH, self.PIXHEIGHT)
+
+        if should_fill:
+            pygame.draw.rect(self.window, self.WHITE, pixel)
+        else: # fade
+            current_color = self.window.get_at((x+1,y+1))
+            if current_color == self.WHITE:
+                new_color = self.WHITE_FADE1
+            elif current_color == self.WHITE_FADE1:
+                new_color = self.WHITE_FADE2
+            else:
+                new_color = self.BLACK
+            pygame.draw.rect(self.window, new_color, pixel)
+            
+
+
+
+
     def clear_screen(self):
         self.mm_screen = [[0 for j in range(self.LWIDTH)] for i in range(self.LHEIGHT)]
         # self.window.fill(self.BLACK)
 
 
-    def _draw(self, logical_x, logical_y):
-        # draw a pixel
-        x = self.PADDING + logical_x * (self.PIXWIDTH + self.PADDING)
-        y = self.PADDING + logical_y * (self.PIXHEIGHT + self.PADDING)
-        pixel = pygame.Rect(x, y, self.PIXWIDTH, self.PIXHEIGHT)
-        pygame.draw.rect(self.window, self.WHITE, pixel)
-
-
-    def render_screen(self):        
-        self.window.fill(self.BLACK)
-
+    def render_screen(self):     
         for y in range(self.LHEIGHT):            
             for x in range(self.LWIDTH):
-                if self.mm_screen[y][x]:
-                    self._draw(x, y)
+                self._draw(x, y, self.mm_screen[y][x])
         
         pygame.display.flip()
     
