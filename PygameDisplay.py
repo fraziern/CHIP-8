@@ -15,10 +15,10 @@ class Display:
     WIDTH = (LWIDTH * PIXWIDTH) + ((LWIDTH + 1) * PADDING)
     HEIGHT = (LHEIGHT * PIXHEIGHT) + ((LHEIGHT + 1) * PADDING)
 
-    WHITE = pygame.Color(255, 204, 2)
-    BLACK = pygame.Color(153, 103, 0)
-    WHITE_FADE1 = WHITE.lerp(BLACK, 0.3)
-    WHITE_FADE2 = WHITE.lerp(BLACK, 0.7)
+    WHITE = (255, 204, 2)
+    BLACK = (153, 103, 0)
+
+    FADEOUT = 50 # speed of pixel fade
 
 
     def __init__(self):
@@ -30,10 +30,14 @@ class Display:
         pygame.init()  # safe to call more than once
 
         self.window = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
-        pygame.display.set_caption("CHIP-8")
-
         self.window.fill(self.BLACK)
+
+        self.pixel_surface = pygame.Surface((self.WIDTH, self.HEIGHT), pygame.SRCALPHA)
+        self.alpha_array = pygame.surfarray.array_alpha(self.pixel_surface)
+
+        pygame.display.set_caption("CHIP-8")
         pygame.display.flip()
+
 
     
     # helper function to get list of bits from a byte
@@ -68,27 +72,16 @@ class Display:
         return vf
     
     # update a "screen" array (memory mapped monochrome window, consisting of a 2D array of bits)
-    # screen_arr - the screen array to read/write
     # x,y - the coordinates to start the read/write
     # sprite - the sprite data to write (bytearray of up to 16 bytes)
     # returns True if any pixel was flipped from 1 to 0
     def update_screen(self, x:int, y:int, sprite:bytearray) -> bool:
         vf = False
-
-        # For N rows:
-        #     Get the Nth byte of sprite data, counting from the memory address in the I register (I is not incremented)
-        #     For each of the 8 pixels/bits in this sprite row (from left to right, ie. from most to least significant bit):
-        #         If the current pixel in the sprite row is on and the pixel at coordinates X,Y on the screen is also on, turn off the pixel and set VF to 1
-        #         Or if the current pixel in the sprite row is on and the screen pixel is not, draw the pixel at the X and Y coordinates
-        #         If you reach the right edge of the screen, stop drawing this row
-        #         Increment X (VX is not incremented)
-        #     Increment Y (VY is not incremented)
-        #     Stop if you reach the bottom edge of the screen
         
         for row in sprite:
             if y >= len(self.mm_screen):
                 break
-            vf = self._update_screen_row(x, y, row)
+            vf = self._update_screen_row(x, y, row) | vf
             y += 1
             
         return vf
@@ -101,31 +94,28 @@ class Display:
         pixel = pygame.Rect(x, y, self.PIXWIDTH, self.PIXHEIGHT)
 
         if should_fill:
-            pygame.draw.rect(self.window, self.WHITE, pixel)
+            pygame.draw.rect(self.pixel_surface, self.WHITE, pixel)
         else: # fade
-            current_color = self.window.get_at((x+1,y+1))
-            if current_color == self.WHITE:
-                new_color = self.WHITE_FADE1
-            elif current_color == self.WHITE_FADE1:
-                new_color = self.WHITE_FADE2
-            else:
-                new_color = self.BLACK
-            pygame.draw.rect(self.window, new_color, pixel)
+            current_alpha = int(self.alpha_array[x,y])
+            faded_color = self.WHITE + (max(0, current_alpha - self.FADEOUT),)
+            pygame.draw.rect(self.pixel_surface, faded_color, pixel)
             
-
-
-
 
     def clear_screen(self):
         self.mm_screen = [[0 for j in range(self.LWIDTH)] for i in range(self.LHEIGHT)]
-        # self.window.fill(self.BLACK)
 
 
-    def render_screen(self):     
+    def render_screen(self):
+        self.window.fill(self.BLACK)
+
+        # get copy of alpha array for fading
+        self.alpha_array = pygame.surfarray.array_alpha(self.pixel_surface)
+
         for y in range(self.LHEIGHT):            
             for x in range(self.LWIDTH):
-                self._draw(x, y, self.mm_screen[y][x])
+                self._draw(x, y, self.mm_screen[y][x]) # draw to pixel_surface
         
+        self.window.blit(self.pixel_surface, (0,0))
         pygame.display.flip()
     
 
